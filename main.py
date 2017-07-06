@@ -13,6 +13,7 @@ from kairos_face import enroll
 class QRReader(object):
     subscriber_list = []
     loaded_topic = ""
+    face_detected = False
 
     def __init__(self, application):
         # Get session
@@ -29,6 +30,10 @@ class QRReader(object):
         self.life = self.session.service("ALAutonomousLife")
         self.customerInfo = CustomerQuery()
 
+        # Preferences
+        self.preferences = self.session.service("ALPreferenceManager")
+        self.logger.info("Initializing - ALPreferenceManager")
+
         # Memory
         self.memory = self.session.service("ALMemory")
         self.logger.info("Initializing - ALMemory")
@@ -36,12 +41,6 @@ class QRReader(object):
         # Camera
         self.camera = self.session.service("ALPhotoCapture")
         self.logger.info("Initializing - ALPhotoCapture")
-
-        # Preferences
-        self.preferences = self.session.service("ALPreferenceManager")
-        self.preferences.update()
-        self.connect_to_preferences()
-        self.logger.info("Initializing - ALPreferenceManager")
 
         # Face Detection
         self.face_detection = self.session.service("ALFaceDetection")
@@ -66,18 +65,17 @@ class QRReader(object):
             self.folder_path = self.preferences.getValue('my_friend', "folder_path")
             self.logger.info(self.folder_path)
             self.threshold = float(str(self.preferences.getValue('my_friend', "threshold")))
-
-            self.logger.info(self.threshold)
             self.record_folder = self.preferences.getValue('my_friend', "record_folder")
             self.photo_count = int(self.preferences.getValue('my_friend', "photo_count"))
             self.resolution = int(self.preferences.getValue('my_friend', "resolution"))
-            self.logger.info("Resolution: " + self.resolution)
             self.camera_id = int(self.preferences.getValue('my_friend', "camera_id"))
             self.picture_format = self.preferences.getValue('my_friend', "picture_format")
             self.file_name = self.preferences.getValue('my_friend', "file_name")
+            self.logger.info("File name: " + self.file_name)
+            self.logger.info("Successfully connected to preferences system")
         except Exception, e:
-            self.logger.info("failed to get preferences".format(e))
-        self.logger.info("Successfully connected to preferences system")
+            self.logger.info(e)
+
 
     def create_signals(self):
         # Create events and subscribe them here
@@ -143,6 +141,7 @@ class QRReader(object):
         self.logger.info("Event raised: " + event_name)
 
         self.register_face(self.customerInfo.customer_number, self.file_name)
+
 
         # Redirect to next app
         next_app = str(self.memory.getData("Global/RedirectingApp"))
@@ -220,6 +219,8 @@ class QRReader(object):
         self.logger.info("Starting app...")
         self.show_screen()
         self.start_dialog()
+        self.preferences.update()
+        self.connect_to_preferences()
         self.logger.info("Started!")
 
     @qi.nobind
