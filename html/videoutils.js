@@ -60,7 +60,8 @@ VideoUtils = (function(self, $) {
             if (image) {
                 var width = image[0];
                 var height = image[1];
-                //console.log("height " + height)
+                console.log("height " + height)
+                console.log("width " + width)
                 draw(canvas, image[6], width, height, color);
             } else {
                 console.log("no image");
@@ -90,8 +91,10 @@ VideoUtils = (function(self, $) {
         format = resolution;
         canvas = document.getElementById(element);
         ID = element + '_camera';
+        
         context = canvas.getContext('2d');
         imageData = context.createImageData(resolutionDict[resolution][0], resolutionDict[resolution][1]);
+        console.log(imageData.data.length)
         buf = new ArrayBuffer(imageData.data.length);
         buf8 = new Uint8ClampedArray(buf);
         buf32 = new Uint32Array(buf);
@@ -99,6 +102,7 @@ VideoUtils = (function(self, $) {
         
         enablePlay = true;
         console.log('starting video...');
+        console.log(format);
         videoDevice.subscribeCamera(ID, 0, format, color, FPS).then(function (handle) {
             if(handle) {
                 console.log('subscribed to the camera with handle: '+ handle);
