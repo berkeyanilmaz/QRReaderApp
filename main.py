@@ -4,16 +4,18 @@ import sys
 import qi
 import os
 import json
+import time
 
 from datetime import datetime
 from customer_query import CustomerQuery
 from kairos_face import enroll
 
 
+
 class QRReader(object):
     subscriber_list = []
     loaded_topic = ""
-    face_detected = False
+    barcode_detected = False
 
     def __init__(self, application):
         # Get session
@@ -37,10 +39,6 @@ class QRReader(object):
         # Memory
         self.memory = self.session.service("ALMemory")
         self.logger.info("Initializing - ALMemory")
-
-        # Camera
-        self.camera = self.session.service("ALPhotoCapture")
-        self.logger.info("Initializing - ALPhotoCapture")
 
         # Face Detection
         self.face_detection = self.session.service("ALFaceDetection")
@@ -76,7 +74,7 @@ class QRReader(object):
         except Exception, e:
             self.logger.info(e)
 
-
+    @qi.nobind
     def create_signals(self):
         # Create events and subscribe them here
         self.logger.info("Creating events...")
@@ -88,14 +86,23 @@ class QRReader(object):
         self.subscriber_list.append([event_subscriber, event_connection])
         self.logger.info("Subscribed to event: " + event_name)
 
-        event_name = "FaceDetected"
+        event_name = "QRReader/ExitApp"
+        self.memory.declareEvent(event_name)
         event_subscriber = self.memory.subscriber(event_name)
-        event_connection = event_subscriber.signal.connect(self.on_face_detected)
+        event_connection = event_subscriber.signal.connect(self.on_self_exit)
+        self.subscriber_list.append([event_subscriber, event_connection])
+        self.logger.info("Subscribed to event: " + event_name)
+
+        event_name = "QRReader/StartTimer"
+        self.memory.declareEvent(event_name)
+        event_subscriber = self.memory.subscriber(event_name)
+        event_connection = event_subscriber.signal.connect(self.on_user_ready)
         self.subscriber_list.append([event_subscriber, event_connection])
         self.logger.info("Subscribed to event: " + event_name)
 
         self.logger.info("Subscribed to all events.")
 
+    @qi.nobind
     def disconnect_signals(self):
         self.logger.info("Deleting events...")
         for sub, i in self.subscriber_list:
@@ -111,14 +118,24 @@ class QRReader(object):
 
     # Event CallBacks Start
 
-    def on_face_detected(self, value):
-        if not self.face_detection:
-            self.logger.info("Face detected. Take photo at  {}".format(str(datetime.now())))
-            self.face_detected = True
-            self.take_picture()
-            self.face_detection.unsubscribe(self.service_name)
+    @qi.nobind
+    def on_user_ready(self):
+        seconds = 0
+        self.logger.info("User Ready")
+        while not self.barcode_detected:
+            if seconds == 10:
+                self.logger.info("Raised event: QRReader/Reminder")
+                self.memory.raiseEvent("QRReader/Reminder", 1)
+            if seconds == 20:
+                self.logger.info("Raised event: QRReader/NoAction")
+                self.memory.raiseEvent("QRReader/NoAction", 1)
+            time.sleep(1)
+            seconds += 1
 
+
+    @qi.nobind
     def on_barcode_detected(self, value):
+        self.barcode_detected = True
         self.logger.info("Barcode detected...")
         try:
             encoded_info = str(value[0][0]).replace(" ", "")
@@ -150,6 +167,10 @@ class QRReader(object):
             self.life.switchFocus(next_app)
         except Exception, e:
             self.logger.info("Error while switching to next app: {} {}".format(next_app, e))
+
+        @qi.nobind
+        def on_self_exit(self, value):
+            self.on_exit()
 
     # Event CallBacks End
 
@@ -251,19 +272,6 @@ class QRReader(object):
     # ---------------------------
 
     # Kairos Starts
-
-    @qi.nobind
-    def take_picture(self):
-        self.life.setAutonomousAbilityEnabled("BasicAwareness", False)
-
-        self.camera.setResolution(self.resolution)
-        self.camera.setCameraID(self.camera_id)
-        self.camera.setPictureFormat(self.picture_format)
-        self.camera.setHalfPressEnabled(True)
-        self.camera.takePictures(self.photo_count, self.record_folder, self.file_name)
-
-        self.life.setAutonomousAbilityEnabled("BasicAwareness", True)
-
     @qi.bind(methodName="registerFace", paramsType=(qi.String, qi.String,), returnType=qi.Bool)
     def register_face(self, customer_id, picture_name):
         try:
