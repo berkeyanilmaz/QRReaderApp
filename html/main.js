@@ -6,7 +6,7 @@ session.subscribeToEvent("QRReader/StartTimer", function() {
     session.service("ALVideoDevice").then(function(vid) {
         var theVideoDevice = vid;
         VideoUtils.unsubscribeAllHandlers(theVideoDevice, "pepper"+"_camera").then(function() {
-            VideoUtils.startVideo(theVideoDevice, "videoBuffer",2, 10, 0)
+            VideoUtils.startVideo(theVideoDevice, "videoBuffer",2, 30, 0)
             $('#loading_video').hide();
         });
     });

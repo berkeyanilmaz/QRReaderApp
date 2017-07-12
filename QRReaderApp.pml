@@ -38,7 +38,7 @@
         <File name="main" src="main.py" />
     </Resources>
     <Topics>
-        <Topic name="barcode_detected_enu" src="barcode_detected/barcode_detected_enu.top" topicName="barcode_detected" language="en_US" />
+        <Topic name="barcode_detected_enu" src="barcode_detected/barcode_detected_enu.top" topicName="" language="" />
     </Topics>
     <IgnoredPaths />
     <Translations auto-fill="en_US">

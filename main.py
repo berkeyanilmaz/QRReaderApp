@@ -119,7 +119,7 @@ class QRReader(object):
     # Event CallBacks Start
 
     @qi.nobind
-    def on_user_ready(self):
+    def on_user_ready(self, value):
         seconds = 0
         self.logger.info("User Ready")
         while not self.barcode_detected:
@@ -135,42 +135,43 @@ class QRReader(object):
 
     @qi.nobind
     def on_barcode_detected(self, value):
-        self.barcode_detected = True
-        self.logger.info("Barcode detected...")
-        try:
-            encoded_info = str(value[0][0]).replace(" ", "")
-            self.logger.info("Information in QR: " + encoded_info)
-            self.customerInfo.query_customer(value1=encoded_info, type1="U")
-            # If any faulty customer information returns
-            if self.customerInfo.name is not '':
-                self.logger.info("Customer found! Query successful...")
-            else:
-                self.logger.info("Customer name is null")
-        except Exception, e:
-            self.logger.info("Error while querying customer: {}".format(e))
+        if not self.barcode_detected:
+            self.barcode_detected = True
+            self.logger.info("Barcode detected...")
+            try:
+                encoded_info = str(value[0][0]).replace(" ", "")
+                self.logger.info("Information in QR: " + encoded_info)
+                self.customerInfo.query_customer(value1=encoded_info, type1="U")
+                # If any faulty customer information returns
+                if self.customerInfo.name is not '':
+                    self.logger.info("Customer found! Query successful...")
+                else:
+                    self.logger.info("Customer name is null")
+            except Exception, e:
+                self.logger.info("Error while querying customer: {}".format(e))
 
-        customer = {"first_name": self.customerInfo.name, "last_name": self.customerInfo.last_name, "card_number": self.customerInfo.card_number,
-                    "citizen_id": self.customerInfo.citizen_id, "gsm_number": self.customerInfo.gsm_number, "segment": self.customerInfo.segment,
-                    "email_address": self.customerInfo.email_address, "customer_number": self.customerInfo.customer_number}
+            customer = {"first_name": self.customerInfo.name, "last_name": self.customerInfo.last_name, "card_number": self.customerInfo.card_number,
+                        "citizen_id": self.customerInfo.citizen_id, "gsm_number": self.customerInfo.gsm_number, "segment": self.customerInfo.segment,
+                        "email_address": self.customerInfo.email_address, "customer_number": self.customerInfo.customer_number}
 
-        event_name = "QRReader/CustomerInfo"
-        self.memory.raiseEvent(event_name, json.dumps(customer))
-        self.logger.info("Event raised: " + event_name)
+            event_name = "QRReader/CustomerInfo"
+            self.memory.raiseEvent(event_name, json.dumps(customer))
+            self.logger.info("Event raised: " + event_name)
 
-        self.register_face(self.customerInfo.customer_number, self.file_name)
+            self.register_face(self.customerInfo.customer_number, self.file_name)
 
 
-        # Redirect to next app
-        next_app = str(self.memory.getData("Global/RedirectingApp"))
-        try:
-            self.logger.info("Switching to {}".format(next_app))
-            self.life.switchFocus(next_app)
-        except Exception, e:
-            self.logger.info("Error while switching to next app: {} {}".format(next_app, e))
+            # Redirect to next app
+            next_app = str(self.memory.getData("Global/RedirectingApp"))
+            try:
+                self.logger.info("Switching to {}".format(next_app))
+                self.life.switchFocus(next_app)
+            except Exception, e:
+                self.logger.info("Error while switching to next app: {} {}".format(next_app, e))
 
-        @qi.nobind
-        def on_self_exit(self, value):
-            self.on_exit()
+    @qi.nobind
+    def on_self_exit(self, value):
+        self.on_exit()
 
     # Event CallBacks End
 
@@ -215,6 +216,7 @@ class QRReader(object):
             self.logger.info("Dialog loaded!")
         except Exception, e:
             self.logger.info("Error while loading dialog: {}".format(e))
+        dialog.gotoTag("start", "barcode_detected")
 
     @qi.nobind
     def stop_dialog(self):
